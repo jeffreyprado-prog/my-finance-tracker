@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinFlow — Personal Finance Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f14;
+    --bg2: #161820;
+    --bg3: #1e2029;
+    --card: #1a1c24;
+    --border: #2a2d3a;
+    --border2: #343848;
+    --accent: #7c6af7;
+    --accent2: #9d8fff;
+    --accent-dim: rgba(124,106,247,0.15);
+    --green: #3dd68c;
+    --green-dim: rgba(61,214,140,0.12);
+    --red: #f06262;
+    --red-dim: rgba(240,98,98,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --text: #e8e9f0;
+    --text2: #9799ab;
+    --text3: #5c5f75;
+    --font-display: 'DM Serif Display', serif;
+    --font: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ─── LAYOUT ─────────────────────────────── */
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(14,15,20,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo span { color: var(--accent2); font-style: italic; }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  .nav-tabs {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .nav-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 13px; font-weight: 500;
+    color: var(--text2);
+    cursor: pointer; border: none; background: none;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { background: var(--accent); color: #fff; }
+
+  main { flex: 1; padding: 28px 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  /* ─── VIEWS ──────────────────────────────── */
+  .view { display: none; }
+  .view.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ─── SUMMARY CARDS ──────────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .summary-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .summary-card.income::before { background: var(--green); }
+  .summary-card.expense::before { background: var(--red); }
+  .summary-card.balance::before { background: var(--accent); }
+  .summary-card.savings::before { background: var(--amber); }
+  .summary-card:hover { border-color: var(--border2); }
+
+  .card-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text3);
+    margin-bottom: 10px;
+  }
+  .card-amount {
+    font-family: var(--font-mono);
+    font-size: 26px; font-weight: 500;
+    line-height: 1;
+  }
+  .card-amount.positive { color: var(--green); }
+  .card-amount.negative { color: var(--red); }
+  .card-amount.neutral { color: var(--accent2); }
+  .card-amount.amber { color: var(--amber); }
+  .card-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+
+  /* ─── SECTION HEADER ─────────────────────── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px; color: var(--text);
+  }
+
+  /* ─── BUTTONS ────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+  .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid transparent; }
+  .btn-danger:hover { border-color: var(--red); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { padding: 7px; border-radius: var(--radius-sm); }
+
+  /* ─── FILTERS BAR ────────────────────────── */
+  .filters-bar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-select, .filter-input {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 7px 12px; font-family: var(--font); font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .filter-select:focus, .filter-input:focus { border-color: var(--accent); }
+  .filter-input { min-width: 180px; }
+  .filter-input::placeholder { color: var(--text3); }
+
+  /* ─── TRANSACTIONS TABLE ─────────────────── */
+  .tx-table-wrap {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .tx-table { width: 100%; border-collapse: collapse; }
+  .tx-table th {
+    padding: 11px 16px; text-align: left;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  .tx-table td {
+    padding: 12px 16px; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .tx-table tr:last-child td { border-bottom: none; }
+  .tx-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .tx-type-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .tx-type-badge.income { background: var(--green-dim); color: var(--green); }
+  .tx-type-badge.expense { background: var(--red-dim); color: var(--red); }
+
+  .tx-amount { font-family: var(--font-mono); font-weight: 500; }
+  .tx-amount.income { color: var(--green); }
+  .tx-amount.expense { color: var(--red); }
+
+  .category-chip {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 500;
+    background: var(--accent-dim); color: var(--accent2);
+  }
+
+  .empty-state {
+    padding: 60px 20px; text-align: center; color: var(--text3);
+  }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ─── MODAL ──────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+    width: 100%; max-width: 440px;
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.25s;
+    box-shadow: var(--shadow);
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 22px; margin-bottom: 24px;
+  }
+
+  .form-row { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600;
+    color: var(--text2); margin-bottom: 6px; letter-spacing: 0.04em; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-family: var(--font); font-size: 14px;
+    padding: 10px 13px; outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 70px; }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
+
+  .type-toggle {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 16px;
+  }
+  .type-btn {
+    padding: 10px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 2px solid var(--border); background: none;
+    color: var(--text2); transition: all 0.2s; font-family: var(--font);
+  }
+  .type-btn.income.active { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .type-btn.expense.active { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
+
+  /* ─── CHARTS VIEW ────────────────────────── */
+  .charts-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; margin-bottom: 20px;
+  }
+  @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text2);
+    margin-bottom: 16px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  /* SVG bar chart */
+  .bar-chart { width: 100%; height: 140px; }
+  .bar-chart .bar { transition: opacity 0.2s; cursor: pointer; }
+  .bar-chart .bar:hover { opacity: 0.8; }
+
+  /* Donut chart */
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  .donut-svg { width: 120px; height: 120px; flex-shrink: 0; }
+  .donut-legend { flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-pct { margin-left: auto; font-family: var(--font-mono); color: var(--text); font-size: 12px; }
+
+  /* Monthly trend bars */
+  .trend-bars { display: flex; align-items: flex-end; gap: 6px; height: 100px; }
+  .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .trend-bar-income, .trend-bar-expense {
+    width: 100%; border-radius: 3px 3px 0 0;
+    min-height: 2px; transition: height 0.4s ease;
+  }
+  .trend-bar-income { background: var(--green); }
+  .trend-bar-expense { background: var(--red); opacity: 0.7; }
+  .trend-month { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+  /* ─── BUDGET VIEW ────────────────────────── */
+  .budget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+  .budget-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .budget-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .budget-category { font-size: 14px; font-weight: 600; }
+  .budget-amounts { font-family: var(--font-mono); font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+  .budget-amounts strong { color: var(--text); }
+
+  .progress-track {
+    height: 6px; background: var(--bg3);
+    border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .progress-fill.ok { background: var(--green); }
+  .progress-fill.warn { background: var(--amber); }
+  .progress-fill.over { background: var(--red); }
+
+  .budget-status { font-size: 11px; margin-top: 6px; }
+  .budget-status.ok { color: var(--green); }
+  .budget-status.warn { color: var(--amber); }
+  .budget-status.over { color: var(--red); }
+
+  /* ─── GOALS VIEW ─────────────────────────── */
+  .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+  .goal-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    position: relative; overflow: hidden;
+  }
+  .goal-card::after {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .goal-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .goal-target { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+  .goal-amounts {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 13px; margin-bottom: 8px;
+  }
+  .goal-saved { color: var(--accent2); }
+  .goal-remaining { color: var(--text3); }
+  .goal-pct { font-size: 22px; font-weight: 600; color: var(--accent2);
+    font-family: var(--font-mono); margin-bottom: 6px; }
+
+  /* ─── TOAST ──────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 11px 20px;
+    font-size: 13px; color: var(--text);
+    opacity: 0; transition: all 0.3s; z-index: 300;
+    box-shadow: var(--shadow); pointer-events: none;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ─── SYNC STATUS ────────────────────────── */
+  .sync-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    display: inline-block; background: var(--text3);
+    transition: background 0.3s;
+  }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.syncing { background: var(--amber); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .sync-label { font-size: 12px; color: var(--text3); margin-left: 6px; }
+
+  /* ─── SETTINGS MODAL ─────────────────────── */
+  .settings-section { margin-bottom: 24px; }
+  .settings-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+
+  /* ─── RESPONSIVE ─────────────────────────── */
+  @media (max-width: 600px) {
+    header { padding: 0 16px; }
+    main { padding: 20px 16px; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .tx-table th:nth-child(4), .tx-table td:nth-child(4),
+    .tx-table th:nth-child(5), .tx-table td:nth-child(5) { display: none; }
+    .nav-tab { padding: 6px 10px; font-size: 12px; }
+    .logo { font-size: 18px; }
+  }
+
+  /* ─── AUTH SCREENS ──────────────────────────── */
+  #authScreen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: var(--bg);
+  }
+  .auth-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 36px 32px;
+    width: 100%; max-width: 380px;
+    box-shadow: var(--shadow);
+  }
+  .auth-logo {
+    font-family: var(--font-display); font-size: 32px;
+    text-align: center; margin-bottom: 6px;
+  }
+  .auth-logo span { color: var(--accent2); font-style: italic; }
+  .auth-subtitle { text-align: center; color: var(--text3); font-size: 13px; margin-bottom: 28px; }
+  .auth-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; color: var(--text2); }
+  .auth-error { background: var(--red-dim); border: 1px solid var(--red);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    font-size: 13px; color: var(--red); margin-bottom: 16px; }
+  .auth-switch { text-align: center; font-size: 13px; color: var(--text3); margin-top: 20px; }
+  .auth-switch a { color: var(--accent2); cursor: pointer; text-decoration: none; }
+  .auth-switch a:hover { text-decoration: underline; }
+
+  /* ─── USERS VIEW ─────────────────────────────── */
+  .user-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .user-row:last-child { border-bottom: none; }
+  .user-name { font-weight: 500; }
+  .user-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    padding: 2px 7px; border-radius: 4px;
+    background: var(--accent-dim); color: var(--accent2); margin-left: 8px; }
+
+  /* scrollable table on small screens */
+  .tx-table-wrap { overflow-x: auto; }
+
+  /* ─── RECURRING BADGE ────────────────────── */
+  .rec-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500;
+    background: var(--amber-dim); color: var(--amber);
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── AUTH SCREEN ─── -->
+<div id="authScreen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">Fin<span>Flow</span></div>
+    <div class="auth-subtitle">Personal Finance Tracker</div>
+    <div id="authError" class="auth-error" style="display:none"></div>
+
+    <!-- SETUP (first run) -->
+    <div id="setupPanel" style="display:none">
+      <div class="auth-title">Create Admin Account</div>
+      <div class="form-row">
+        <label class="form-label">Your Name</label>
+        <input class="form-input" id="setupName" placeholder="e.g. Jeffrey">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="setupPw" placeholder="Choose a password">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="doSetup()">Create Account & Sign In</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginPanel" style="display:none">
+      <div class="auth-title">Sign In</div>
+      <div class="form-row">
+        <label class="form-label">Name</label>
+        <input class="form-input" id="loginName" placeholder="Your name">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="loginPw" placeholder="Your password">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="doLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="logo">Fin<span>Flow</span></div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="switchView('dashboard')">Dashboard</button>
+      <button class="nav-tab" onclick="switchView('transactions')">Transactions</button>
+      <button class="nav-tab" onclick="switchView('recurring')">Recurring</button>
+      <button class="nav-tab" onclick="switchView('budgets')">Budgets</button>
+      <button class="nav-tab" onclick="switchView('goals')">Goals</button>
+      <button class="nav-tab" onclick="switchView('charts')">Charts</button>
+      <button class="nav-tab" id="usersTab" style="display:none" onclick="switchView('users')">Users</button>
+    </nav>
+    <div class="header-actions">
+      <span class="sync-dot" id="syncDot"></span>
+      <span class="sync-label" id="syncLabel">Loading…</span>
+      <span id="headerUser" style="font-size:12px;color:var(--text2);display:none"></span>
+      <button class="btn btn-ghost btn-sm" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
+      <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="view active" id="view-dashboard">
+      <div class="summary-grid">
+        <div class="summary-card income">
+          <div class="card-label">Total Income</div>
+          <div class="card-amount positive" id="totalIncome">$0.00</div>
+          <div class="card-sub" id="incomeCount">0 transactions</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="card-label">Total Expenses</div>
+          <div class="card-amount negative" id="totalExpense">$0.00</div>
+          <div class="card-sub" id="expenseCount">0 transactions</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-label">Net Balance</div>
+          <div class="card-amount neutral" id="netBalance">$0.00</div>
+          <div class="card-sub" id="balanceNote">This month</div>
+        </div>
+        <div class="summary-card savings">
+          <div class="card-label">Savings Rate</div>
+          <div class="card-amount amber" id="savingsRate">0%</div>
+          <div class="card-sub">of income saved</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Recent Transactions</div>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add</button>
+      </div>
+      <div class="tx-table-wrap">
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="recentTxBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TRANSACTIONS ── -->
+    <div class="view" id="view-transactions">
+      <div class="section-header">
+        <div class="section-title">All Transactions</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="exportCSV()">↓ Export CSV</button>
+          <button class="btn btn-primary" onclick="openAddModal()">+ Add</button>
+        </div>
+      </div>
+      <div class="filters-bar">
+        <input class="filter-input" id="searchInput" placeholder="Search…" oninput="renderTxTable()">
+        <select class="filter-select" id="typeFilter" onchange="renderTxTable()">
+          <option value="">All Types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <select class="filter-select" id="catFilter" onchange="renderTxTable()">
+          <option value="">All Categories</option>
+        </select>
+        <select class="filter-select" id="monthFilter" onchange="renderTxTable()">
+          <option value="">All Months</option>
+        </select>
+      </div>
+      <div class="tx-table-wrap">
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="allTxBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── RECURRING ── -->
+    <div class="view" id="view-recurring">
+      <div class="section-header">
+        <div class="section-title">Recurring Transactions</div>
+        <button class="btn btn-primary" onclick="openRecurringModal()">+ Add Rule</button>
+      </div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <span>Rules auto-generate transactions on their scheduled date. Click <strong style="color:var(--text2)">Apply Due</strong> to post any that are due today.</span>
+        <button class="btn btn-ghost" onclick="applyDueRecurring()">⚡ Apply Due</button>
+      </div>
+      <div id="recurringGrid" class="budget-grid"></div>
+    </div>
+
+    <!-- ── BUDGETS ── -->
+    <div class="view" id="view-budgets">
+      <div class="section-header">
+        <div class="section-title">Monthly Budgets</div>
+        <button class="btn btn-primary" onclick="openBudgetModal()">+ Set Budget</button>
+      </div>
+      <div class="budget-grid" id="budgetGrid"></div>
+    </div>
+
+    <!-- ── GOALS ── -->
+    <div class="view" id="view-goals">
+      <div class="section-header">
+        <div class="section-title">Savings Goals</div>
+        <button class="btn btn-primary" onclick="openGoalModal()">+ Add Goal</button>
+      </div>
+      <div class="goals-grid" id="goalsGrid"></div>
+    </div>
+
+    <!-- ── CHARTS ── -->
+    <div class="view" id="view-charts">
+      <div class="section-header">
+        <div class="section-title">Analytics</div>
+        <select class="filter-select" id="chartMonthFilter" onchange="renderCharts()">
+          <option value="all">All Time</option>
+        </select>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Income vs Expenses by Month</div>
+          <div id="trendChart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Spending by Category</div>
+          <div class="donut-wrap" id="donutChart"></div>
+        </div>
+      </div>
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-title">Daily Spending (Current Month)</div>
+        <div id="dailyChart"></div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-title">Currency Converter</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input class="filter-input" id="fxAmount" type="number" step="0.01" placeholder="Amount" style="width:120px" oninput="convertCurrency()">
+          <select class="filter-select" id="fxFrom" onchange="convertCurrency()">
+            <option value="SGD">SGD</option><option value="USD">USD</option><option value="MYR">MYR</option>
+            <option value="PHP">PHP</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
+            <option value="JPY">JPY</option><option value="AUD">AUD</option><option value="CNY">CNY</option>
+            <option value="HKD">HKD</option><option value="THB">THB</option><option value="IDR">IDR</option>
+          </select>
+          <span style="color:var(--text3);font-size:18px">→</span>
+          <select class="filter-select" id="fxTo" onchange="convertCurrency()">
+            <option value="USD">USD</option><option value="SGD">SGD</option><option value="MYR">MYR</option>
+            <option value="PHP">PHP</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
+            <option value="JPY">JPY</option><option value="AUD">AUD</option><option value="CNY">CNY</option>
+            <option value="HKD">HKD</option><option value="THB">THB</option><option value="IDR">IDR</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="fetchFxRates()">↺ Refresh</button>
+        </div>
+        <div id="fxResult" style="margin-top:14px;font-family:var(--font-mono);font-size:22px;color:var(--accent2)"></div>
+        <div id="fxMeta" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- ── USERS (admin only) ── -->
+    <div class="view" id="view-users">
+      <div class="section-header">
+        <div class="section-title">Users</div>
+        <button class="btn btn-primary" onclick="openAddUserModal()">+ Add User</button>
+      </div>
+      <div class="tx-table-wrap" id="usersTable"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── ADD TRANSACTION MODAL ─── -->
+<div class="modal-overlay" id="txModal">
+  <div class="modal">
+    <div class="modal-title" id="txModalTitle">Add Transaction</div>
+    <div class="type-toggle">
+      <button class="type-btn income active" id="typeIncome" onclick="setTxType('income')">↑ Income</button>
+      <button class="type-btn expense" id="typeExpense" onclick="setTxType('expense')">↓ Expense</button>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description *</label>
+      <input class="form-input" id="txDesc" placeholder="e.g. Salary, Groceries…">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Amount (SGD) *</label>
+      <input class="form-input" id="txAmount" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Category *</label>
+      <select class="form-select" id="txCategory"></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Date *</label>
+      <input class="form-input" id="txDate" type="date">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Note</label>
+      <textarea class="form-textarea" id="txNote" placeholder="Optional note…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('txModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTx()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BUDGET MODAL ─── -->
+<div class="modal-overlay" id="budgetModal">
+  <div class="modal">
+    <div class="modal-title">Set Monthly Budget</div>
+    <div class="form-row">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="budgetCat"></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Monthly Limit (SGD)</label>
+      <input class="form-input" id="budgetAmount" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('budgetModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBudget()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── GOAL MODAL ─── -->
+<div class="modal-overlay" id="goalModal">
+  <div class="modal">
+    <div class="modal-title">Add Savings Goal</div>
+    <div class="form-row">
+      <label class="form-label">Goal Name</label>
+      <input class="form-input" id="goalName" placeholder="e.g. Emergency Fund, Holiday…">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Target Amount (SGD)</label>
+      <input class="form-input" id="goalTarget" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Amount Saved So Far</label>
+      <input class="form-input" id="goalSaved" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Target Date</label>
+      <input class="form-input" id="goalDate" type="date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('goalModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGoal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── RECURRING MODAL ─── -->
+<div class="modal-overlay" id="recurringModal">
+  <div class="modal">
+    <div class="modal-title">Add Recurring Rule</div>
+    <div class="type-toggle">
+      <button class="type-btn income active" id="recTypeIncome" onclick="setRecType('income')">↑ Income</button>
+      <button class="type-btn expense" id="recTypeExpense" onclick="setRecType('expense')">↓ Expense</button>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description *</label>
+      <input class="form-input" id="recDesc" placeholder="e.g. Salary, Netflix…">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Amount *</label>
+      <input class="form-input" id="recAmount" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Category *</label>
+      <select class="form-select" id="recCategory"></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Frequency</label>
+      <select class="form-select" id="recFreq">
+        <option value="monthly">Monthly</option>
+        <option value="weekly">Weekly</option>
+        <option value="yearly">Yearly</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Day of Month (for monthly)</label>
+      <input class="form-input" id="recDay" type="number" min="1" max="28" placeholder="e.g. 1, 15, 28">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Note</label>
+      <input class="form-input" id="recNote" placeholder="Optional note">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('recurringModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRecurring()">Save Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADD USER MODAL ─── -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal">
+    <div class="modal-title">Add User</div>
+    <div class="form-row">
+      <label class="form-label">Name</label>
+      <input class="form-input" id="newUserName" placeholder="Full name">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="newUserPw" placeholder="Set a password">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Role</label>
+      <select class="form-select" id="newUserRole">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('addUserModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewUser()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CHANGE PASSWORD MODAL ─── -->
+<div class="modal-overlay" id="changePwModal">
+  <div class="modal">
+    <div class="modal-title">Change Password</div>
+    <div class="form-row">
+      <label class="form-label">Current Password</label>
+      <input class="form-input" type="password" id="cpOld" placeholder="Current password">
+    </div>
+    <div class="form-row">
+      <label class="form-label">New Password</label>
+      <input class="form-input" type="password" id="cpNew" placeholder="New password">
+    </div>
+    <div id="cpError" style="font-size:12px;color:var(--red);display:none;margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('changePwModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangePw()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SETTINGS MODAL ─── -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">Settings</div>
+    <div class="settings-section">
+      <div class="settings-section-title">JSONBin Cloud Sync</div>
+      <div class="form-row">
+        <label class="form-label">Access Key</label>
+        <input class="form-input" id="settingApiKey" type="password" placeholder="$2a$10$…">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Bin ID</label>
+        <input class="form-input" id="settingBinId" placeholder="Leave blank to auto-create">
+      </div>
+      <div style="font-size:12px;color:var(--text3)">
+        Enter once on any device — saved automatically for this browser session.
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Currency Display</div>
+      <div class="form-row">
+        <select class="form-select" id="settingCurrency">
+          <option value="SGD">SGD — Singapore Dollar</option>
+          <option value="USD">USD — US Dollar</option>
+          <option value="MYR">MYR — Malaysian Ringgit</option>
+          <option value="PHP">PHP — Philippine Peso</option>
+          <option value="EUR">EUR — Euro</option>
+          <option value="GBP">GBP — British Pound</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Account</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('settingsModal');openModal('changePwModal')">Change Password</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Danger Zone</div>
+      <button class="btn btn-danger btn-sm" onclick="clearAllData()">Clear All Local Data</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save & Connect</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  CONFIG & STATE
+// ─────────────────────────────────────────────
+const APP_VERSION = 'v2';
+
+const DEFAULT_CATEGORIES = {
+  income: ['Salary','Freelance','Business','Investment','Gift','Other Income'],
+  expense: ['Housing','Food & Dining','Transport','Utilities','Healthcare',
+            'Shopping','Entertainment','Education','Savings','Tithe/Offering','Other']
+};
+
+const DONUT_COLORS = ['#7c6af7','#3dd68c','#f06262','#f5a623','#60b4f7',
+                      '#c47af7','#f77c9d','#7af7d6','#f7c87a','#a0f76a','#f7a07a'];
+
+// ─── JSONBIN CREDENTIALS ─────────────────────
+// Same pattern as El Shaddai app:
+// localStorage is checked first; these hardcoded values are the fallback.
+// After entering credentials via Settings on any one device, they are saved
+// to localStorage on that device AND baked into the GitHub file as defaults
+// so every other device gets them automatically from the same URL.
+const DEFAULT_API_KEY  = '$2a$10$0ken3IqOTfNDU/I9ySbEZOOEuBMDNXqOr9xitvzknf5Otfr2dBemW';
+const DEFAULT_BIN_ID   = '6a266fedf5f4af5e29c9bacb';
+const DEFAULT_CURRENCY = 'SGD';
+// ─────────────────────────────────────────────
+
+// Simple localStorage helpers (same as El Shaddai LS object)
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+
+let state = {
+  users: [],              // [{ name, password, isAdmin }]
+  transactions: [],       // each tx has owner field
+  budgets: {},            // { username: { category: amount } }
+  goals: [],              // each goal has owner field
+  recurringRules: [],     // each rule has owner field
+  fxRates: {},
+  settings: {
+    apiKey:   LS.get('ff_key')  || DEFAULT_API_KEY,
+    binId:    LS.get('ff_bin')  || DEFAULT_BIN_ID,
+    currency: LS.get('ff_cur')  || DEFAULT_CURRENCY
+  }
+};
+
+let loggedIn = null;  // { name, isAdmin }
+
+let editingTxId = null;
+let currentTxType = 'income';
+let syncTimer = null;
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+async function init() {
+  loadLocalState();
+  if (state.settings.apiKey && state.settings.binId) {
+    setSyncStatus('syncing');
+    await syncFromCloud();
+  } else {
+    setSyncStatus('idle');
+  }
+  renderAuthOrApp();
+}
+
+function loadLocalState() {
+  try {
+    const saved = localStorage.getItem('finflow_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.users)          state.users          = parsed.users;
+      if (parsed.transactions)   state.transactions   = parsed.transactions;
+      if (parsed.budgets)        state.budgets        = parsed.budgets;
+      if (parsed.goals)          state.goals          = parsed.goals;
+      if (parsed.recurringRules) state.recurringRules = parsed.recurringRules;
+      if (parsed.fxRates)        state.fxRates        = parsed.fxRates;
+      if (parsed.settings?.currency) state.settings.currency = parsed.settings.currency;
+    }
+  } catch(e) {}
+}
+
+function saveLocalState() {
+  localStorage.setItem('finflow_data', JSON.stringify({
+    users:          state.users,
+    transactions:   state.transactions,
+    budgets:        state.budgets,
+    goals:          state.goals,
+    recurringRules: state.recurringRules,
+    fxRates:        state.fxRates,
+    settings:       { currency: state.settings.currency }
+  }));
+}
+
+// ─────────────────────────────────────────────
+//  CLOUD SYNC (JSONBin)
+// ─────────────────────────────────────────────
+function setSyncStatus(status, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + (status === 'ok' ? 'ok' : status === 'syncing' ? 'syncing' : status === 'error' ? 'error' : '');
+  lbl.textContent = label || (status === 'ok' ? 'Synced' : status === 'syncing' ? 'Syncing…' : status === 'error' ? 'Sync error' : 'Local only');
+}
+
+async function syncFromCloud() {
+  if (!state.settings.apiKey || !state.settings.binId) return;
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${state.settings.binId}/latest`, {
+      headers: { 'X-Access-Key': state.settings.apiKey }
+    });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const remote = data.record;
+    if (remote && remote.transactions !== undefined) {
+      state.users        = remote.users        || [];
+      state.transactions = remote.transactions || [];
+      state.budgets      = remote.budgets      || {};
+      state.goals        = remote.goals        || [];
+      state.recurringRules = remote.recurringRules || [];
+      saveLocalState();
+      if (loggedIn) renderAll();
+      else renderAuthOrApp();
+    }
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('error', 'Sync failed');
+  }
+}
+
+async function syncToCloud() {
+  if (!state.settings.apiKey || !state.settings.binId) return;
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${state.settings.binId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': state.settings.apiKey
+      },
+      body: JSON.stringify({
+        users:          state.users,
+        transactions:   state.transactions,
+        budgets:        state.budgets,
+        goals:          state.goals,
+        recurringRules: state.recurringRules
+      })
+    });
+    if (!res.ok) throw new Error(res.status);
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('error', 'Sync failed');
+    showToast('Cloud sync failed — data saved locally', 'error');
+  }
+}
+
+async function createNewBin() {
+  if (!state.settings.apiKey) return null;
+  try {
+    const res = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': state.settings.apiKey,
+        'X-Bin-Name': 'FinFlow Data',
+        'X-Bin-Private': 'true'
+      },
+      body: JSON.stringify({ users: [], transactions: [], budgets: {}, goals: [], recurringRules: [] })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.metadata?.id || null;
+  } catch(e) { return null; }
+}
+
+function scheduleSyncToCloud() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncToCloud, 1500);
+}
+
+// ─────────────────────────────────────────────
+//  VIEWS
+// ─────────────────────────────────────────────
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  renderAll();
+}
+
+function renderAll() {
+  if (!loggedIn) return;
+  renderSummaryCards();
+  renderRecentTx();
+  renderTxTable();
+  renderBudgets();
+  renderGoals();
+  renderRecurring();
+  renderCharts();
+  renderUsers();
+  populateFilters();
+}
+
+// ─────────────────────────────────────────────
+//  SUMMARY CARDS
+// ─────────────────────────────────────────────
+function getCurrencySymbol() {
+  const map = { SGD:'S$', USD:'$', MYR:'RM', PHP:'₱', EUR:'€', GBP:'£' };
+  return map[state.settings.currency] || '$';
+}
+
+function fmt(n) {
+  return getCurrencySymbol() + Math.abs(n).toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Returns transactions visible to the current user.
+// Transactions with no owner (added before login was introduced)
+// are treated as belonging to the current user.
+function myTx() {
+  if (!loggedIn) return [];
+  return state.transactions.filter(t => !t.owner || t.owner === loggedIn.name);
+}
+
+// Returns budgets for current user.
+// Falls back to flat budgets (pre-login format) if no per-user budgets exist.
+function myBudgets() {
+  if (!loggedIn) return {};
+  if (state.budgets[loggedIn.name]) return state.budgets[loggedIn.name];
+  // Backwards compat: if budgets is flat { category: amount }, use it
+  const firstVal = Object.values(state.budgets)[0];
+  if (typeof firstVal === 'number') return state.budgets;
+  return {};
+}
+
+function getMonthTx() {
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  return myTx().filter(t => t.date.startsWith(ym));
+}
+
+function renderSummaryCards() {
+  const txs = getMonthTx();
+  const income = txs.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+  const expense = txs.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const balance = income - expense;
+  const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0;
+
+  document.getElementById('totalIncome').textContent = fmt(income);
+  document.getElementById('totalExpense').textContent = fmt(expense);
+  document.getElementById('netBalance').textContent = (balance >= 0 ? '' : '-') + fmt(balance);
+  document.getElementById('netBalance').className = 'card-amount ' + (balance >= 0 ? 'positive' : 'negative');
+  document.getElementById('savingsRate').textContent = savingsRate + '%';
+
+  const incomeAll = txs.filter(t => t.type === 'income').length;
+  const expenseAll = txs.filter(t => t.type === 'expense').length;
+  document.getElementById('incomeCount').textContent = incomeAll + ' this month';
+  document.getElementById('expenseCount').textContent = expenseAll + ' this month';
+}
+
+// ─────────────────────────────────────────────
+//  TRANSACTION TABLE
+// ─────────────────────────────────────────────
+function txRowHTML(tx, cols) {
+  return `<tr>
+    <td style="color:var(--text2);white-space:nowrap">${tx.date}</td>
+    <td style="font-weight:500">${esc(tx.desc)}</td>
+    <td><span class="category-chip">${esc(tx.category)}</span></td>
+    <td><span class="tx-type-badge ${tx.type}">${tx.type === 'income' ? '↑ Income' : '↓ Expense'}</span></td>
+    <td><span class="tx-amount ${tx.type}">${tx.type === 'expense' ? '-' : '+'}${fmt(tx.amount)}</span></td>
+    ${cols === 7 ? `<td style="color:var(--text3);font-size:12px">${esc(tx.note||'')}</td>` : ''}
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="openEditModal('${tx.id}')" title="Edit">✎</button>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteTx('${tx.id}')" title="Delete">✕</button>
+    </td>
+  </tr>`;
+}
+
+function renderRecentTx() {
+  const tbody = document.getElementById('recentTxBody');
+  const recent = [...myTx()].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 8);
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">💸</div><p>No transactions yet. Add your first one!</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = recent.map(t => txRowHTML(t, 6)).join('');
+}
+
+function renderTxTable() {
+  const tbody = document.getElementById('allTxBody');
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+  const typeF = document.getElementById('typeFilter')?.value || '';
+  const catF = document.getElementById('catFilter')?.value || '';
+  const monthF = document.getElementById('monthFilter')?.value || '';
+
+  let txs = [...myTx()].sort((a,b) => b.date.localeCompare(a.date));
+
+  if (search) txs = txs.filter(t => t.desc.toLowerCase().includes(search) || t.category.toLowerCase().includes(search) || (t.note||'').toLowerCase().includes(search));
+  if (typeF) txs = txs.filter(t => t.type === typeF);
+  if (catF) txs = txs.filter(t => t.category === catF);
+  if (monthF) txs = txs.filter(t => t.date.startsWith(monthF));
+
+  if (!txs.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔍</div><p>No transactions match your filters.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = txs.map(t => txRowHTML(t, 7)).join('');
+}
+
+// ─────────────────────────────────────────────
+//  ADD / DELETE TX
+// ─────────────────────────────────────────────
+function openAddModal() {
+  editingTxId = null;
+  document.getElementById('txModalTitle').textContent = 'Add Transaction';
+  document.getElementById('txDesc').value = '';
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txNote').value = '';
+  document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+  setTxType('income');
+  populateTxCategorySelect('income');
+  openModal('txModal');
+}
+
+function openEditModal(id) {
+  const tx = state.transactions.find(t => t.id === id);
+  if (!tx) return;
+  editingTxId = id;
+  document.getElementById('txModalTitle').textContent = 'Edit Transaction';
+  setTxType(tx.type);
+  populateTxCategorySelect(tx.type);
+  document.getElementById('txDesc').value = tx.desc;
+  document.getElementById('txAmount').value = tx.amount;
+  document.getElementById('txDate').value = tx.date;
+  document.getElementById('txNote').value = tx.note || '';
+  // Set the category select to match
+  document.getElementById('txCategory').value = tx.category;
+  openModal('txModal');
+}
+
+function setTxType(type) {
+  currentTxType = type;
+  document.getElementById('typeIncome').classList.toggle('active', type === 'income');
+  document.getElementById('typeExpense').classList.toggle('active', type === 'expense');
+  populateTxCategorySelect(type);
+}
+
+function populateTxCategorySelect(type) {
+  const sel = document.getElementById('txCategory');
+  sel.innerHTML = DEFAULT_CATEGORIES[type].map(c => `<option>${c}</option>`).join('');
+}
+
+function saveTx() {
+  const desc = document.getElementById('txDesc').value.trim();
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const category = document.getElementById('txCategory').value;
+  const date = document.getElementById('txDate').value;
+  const note = document.getElementById('txNote').value.trim();
+
+  if (!desc || isNaN(amount) || amount <= 0 || !date) {
+    showToast('Please fill in all required fields', 'error'); return;
+  }
+
+  const tx = {
+    id: editingTxId || Date.now().toString(),
+    type: currentTxType,
+    desc, amount, category, date, note,
+    owner: loggedIn.name,
+    created: new Date().toISOString()
+  };
+
+  if (editingTxId) {
+    state.transactions = state.transactions.map(t => t.id === editingTxId ? tx : t);
+  } else {
+    state.transactions.unshift(tx);
+  }
+
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderAll();
+  closeModal('txModal');
+  showToast(editingTxId ? 'Transaction updated ✓' : 'Transaction added ✓', 'success');
+}
+
+function deleteTx(id) {
+  if (!confirm('Delete this transaction?')) return;
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderAll();
+  showToast('Deleted', 'success');
+}
+
+// ─────────────────────────────────────────────
+//  BUDGETS
+// ─────────────────────────────────────────────
+function openBudgetModal() {
+  const sel = document.getElementById('budgetCat');
+  sel.innerHTML = DEFAULT_CATEGORIES.expense.map(c => `<option>${c}</option>`).join('');
+  document.getElementById('budgetAmount').value = '';
+  openModal('budgetModal');
+}
+
+function saveBudget() {
+  const cat = document.getElementById('budgetCat').value;
+  const amt = parseFloat(document.getElementById('budgetAmount').value);
+  if (isNaN(amt) || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
+  if (!state.budgets[loggedIn.name]) state.budgets[loggedIn.name] = {};
+  state.budgets[loggedIn.name][cat] = amt;
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderBudgets();
+  closeModal('budgetModal');
+  showToast('Budget set ✓', 'success');
+}
+
+function renderBudgets() {
+  const grid = document.getElementById('budgetGrid');
+  if (!grid) return;
+
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthExpenses = myTx().filter(t => t.type === 'expense' && t.date.startsWith(ym));
+  const budgets = myBudgets();
+  const categories = Object.keys(budgets);
+  if (!categories.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎯</div><p>No budgets set. Click "Set Budget" to start tracking spending limits.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = categories.map(cat => {
+    const limit = budgets[cat];
+    const spent = monthExpenses.filter(t => t.category === cat).reduce((s,t) => s+t.amount, 0);
+    const pct = Math.min(100, Math.round((spent / limit) * 100));
+    const status = pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok';
+    const remaining = limit - spent;
+
+    return `<div class="budget-card">
+      <div class="budget-header">
+        <div class="budget-category">${esc(cat)}</div>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteBudget('${esc(cat)}')" title="Remove">✕</button>
+      </div>
+      <div class="budget-amounts">Spent: <strong>${fmt(spent)}</strong> of ${fmt(limit)}</div>
+      <div class="progress-track"><div class="progress-fill ${status}" style="width:${pct}%"></div></div>
+      <div class="budget-status ${status}">
+        ${status === 'over' ? `Over by ${fmt(Math.abs(remaining))}` : status === 'warn' ? `${fmt(remaining)} left — nearing limit` : `${fmt(remaining)} remaining`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteBudget(cat) {
+  if (state.budgets[loggedIn.name]) delete state.budgets[loggedIn.name][cat];
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderBudgets();
+  showToast('Budget removed', 'success');
+}
+
+// ─────────────────────────────────────────────
+//  GOALS
+// ─────────────────────────────────────────────
+function openGoalModal() {
+  document.getElementById('goalName').value = '';
+  document.getElementById('goalTarget').value = '';
+  document.getElementById('goalSaved').value = '';
+  document.getElementById('goalDate').value = '';
+  openModal('goalModal');
+}
+
+function saveGoal() {
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const saved = parseFloat(document.getElementById('goalSaved').value) || 0;
+  const date = document.getElementById('goalDate').value;
+
+  if (!name || isNaN(target) || target <= 0) { showToast('Enter a name and target amount', 'error'); return; }
+
+  state.goals.push({ id: Date.now().toString(), name, target, saved, date, owner: loggedIn.name, created: new Date().toISOString() });
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderGoals();
+  closeModal('goalModal');
+  showToast('Goal added ✓', 'success');
+}
+
+function deleteGoal(id) {
+  state.goals = state.goals.filter(g => g.id !== id);
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderGoals();
+  showToast('Goal removed', 'success');
+}
+
+function updateGoalSaved(id, delta) {
+  const g = state.goals.find(g => g.id === id);
+  if (!g) return;
+  const add = parseFloat(prompt('Add amount to this goal (SGD):', ''));
+  if (isNaN(add) || add <= 0) return;
+  g.saved = Math.min(g.target, g.saved + add);
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderGoals();
+  showToast('Goal updated ✓', 'success');
+}
+
+function renderGoals() {
+  const grid = document.getElementById('goalsGrid');
+  if (!grid) return;
+
+  if (!state.goals.filter(g => g.owner === loggedIn.name).length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🏆</div><p>No goals yet. Set a savings goal to stay motivated!</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = state.goals.filter(g => g.owner === loggedIn.name).map(g => {
+    const pct = Math.min(100, Math.round((g.saved / g.target) * 100));
+    const remaining = g.target - g.saved;
+    const daysLeft = g.date ? Math.ceil((new Date(g.date) - new Date()) / 86400000) : null;
+
+    return `<div class="goal-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="goal-name">${esc(g.name)}</div>
+          <div class="goal-target">Target: ${fmt(g.target)}${g.date ? ` · ${daysLeft > 0 ? daysLeft + ' days left' : 'Due!'}` : ''}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteGoal('${g.id}')" title="Remove">✕</button>
+      </div>
+      <div class="goal-pct">${pct}%</div>
+      <div class="goal-amounts">
+        <span class="goal-saved">${fmt(g.saved)} saved</span>
+        <span class="goal-remaining">${fmt(remaining)} to go</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill ${pct >= 100 ? 'ok' : pct >= 60 ? 'ok' : 'warn'}" style="width:${pct}%"></div></div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="updateGoalSaved('${g.id}')">+ Add Savings</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+//  CHARTS
+// ─────────────────────────────────────────────
+function renderCharts() {
+  renderTrendChart();
+  renderDonutChart();
+  renderDailyChart();
+}
+
+function getMonthlyTotals() {
+  const months = {};
+  myTx().forEach(t => {
+    const ym = t.date.substring(0, 7);
+    if (!months[ym]) months[ym] = { income: 0, expense: 0 };
+    months[ym][t.type] += t.amount;
+  });
+  return Object.entries(months).sort((a,b) => a[0].localeCompare(b[0])).slice(-6);
+}
+
+function renderTrendChart() {
+  const el = document.getElementById('trendChart');
+  if (!el) return;
+  const monthly = getMonthlyTotals();
+
+  if (!monthly.length) { el.innerHTML = '<div class="empty-state"><p>No data yet</p></div>'; return; }
+
+  const maxVal = Math.max(...monthly.flatMap(([,d]) => [d.income, d.expense]), 1);
+
+  const bars = monthly.map(([ym, d]) => {
+    const iH = Math.round((d.income / maxVal) * 90);
+    const eH = Math.round((d.expense / maxVal) * 90);
+    const label = new Date(ym + '-01').toLocaleDateString('en-SG', { month: 'short' });
+    return `<div class="trend-col">
+      <div style="display:flex;gap:2px;align-items:flex-end;height:90px">
+        <div class="trend-bar-income" style="height:${iH}px;width:48%;"></div>
+        <div class="trend-bar-expense" style="height:${eH}px;width:48%;"></div>
+      </div>
+      <div class="trend-month">${label}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;font-size:11px;color:var(--text3)">
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block"></span>Income</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:var(--red);border-radius:2px;display:inline-block;opacity:0.7"></span>Expenses</span>
+  </div>
+  <div class="trend-bars">${bars}</div>`;
+}
+
+function renderDonutChart() {
+  const el = document.getElementById('donutChart');
+  if (!el) return;
+
+  const expenses = myTx().filter(t => t.type === 'expense');
+  if (!expenses.length) { el.innerHTML = '<div class="empty-state"><p>No expense data</p></div>'; return; }
+
+  const byCategory = {};
+  expenses.forEach(t => { byCategory[t.category] = (byCategory[t.category] || 0) + t.amount; });
+  const sorted = Object.entries(byCategory).sort((a,b) => b[1]-a[1]);
+  const total = sorted.reduce((s,[,v]) => s+v, 0);
+
+  // SVG donut
+  const R = 44, cx = 60, cy = 60, strokeW = 18;
+  const circ = 2 * Math.PI * R;
+  let offset = 0;
+  const segments = sorted.map(([cat, val], i) => {
+    const pct = val / total;
+    const dash = pct * circ;
+    const seg = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${DONUT_COLORS[i % DONUT_COLORS.length]}" stroke-width="${strokeW}" stroke-dasharray="${dash} ${circ - dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += dash;
+    return seg;
+  });
+
+  const legend = sorted.slice(0, 6).map(([cat, val], i) => {
+    const pct = Math.round((val / total) * 100);
+    return `<div class="legend-item">
+      <span class="legend-dot" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></span>
+      <span>${esc(cat)}</span>
+      <span class="legend-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <svg class="donut-svg" viewBox="0 0 120 120">${segments.join('')}
+      <text x="${cx}" y="${cy+5}" text-anchor="middle" fill="var(--text2)" font-size="10" font-family="DM Sans">${fmt(total)}</text>
+    </svg>
+    <div class="donut-legend">${legend}</div>`;
+}
+
+function renderDailyChart() {
+  const el = document.getElementById('dailyChart');
+  if (!el) return;
+
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+
+  const daily = {};
+  myTx().filter(t => t.type === 'expense' && t.date.startsWith(ym))
+    .forEach(t => { const d = parseInt(t.date.split('-')[2]); daily[d] = (daily[d] || 0) + t.amount; });
+
+  const maxVal = Math.max(...Object.values(daily), 1);
+  const bars = Array.from({length: daysInMonth}, (_, i) => {
+    const d = i + 1;
+    const val = daily[d] || 0;
+    const h = Math.max(2, Math.round((val / maxVal) * 70));
+    const isToday = d === now.getDate();
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div style="width:100%;height:${h}px;background:${isToday ? 'var(--accent)' : 'var(--red)'};opacity:${isToday ? 1 : 0.6};border-radius:2px 2px 0 0;min-height:2px;transition:height 0.3s"></div>
+      ${d % 5 === 0 || d === 1 ? `<div style="font-size:9px;color:var(--text3)">${d}</div>` : '<div style="height:13px"></div>'}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="display:flex;align-items:flex-end;gap:2px;height:90px">${bars}</div>`;
+}
+
+// ─────────────────────────────────────────────
+//  FILTERS
+// ─────────────────────────────────────────────
+function populateFilters() {
+  // categories
+  const cats = [...new Set(myTx().map(t => t.category))].sort();
+  const catSel = document.getElementById('catFilter');
+  if (catSel) {
+    const cur = catSel.value;
+    catSel.innerHTML = '<option value="">All Categories</option>' + cats.map(c => `<option value="${esc(c)}" ${cur===c?'selected':''}>${esc(c)}</option>`).join('');
+  }
+
+  // months
+  const months = [...new Set(myTx().map(t => t.date.substring(0, 7)))].sort().reverse();
+  const mSel = document.getElementById('monthFilter');
+  if (mSel) {
+    const cur = mSel.value;
+    mSel.innerHTML = '<option value="">All Months</option>' + months.map(m => {
+      const label = new Date(m + '-01').toLocaleDateString('en-SG', { year: 'numeric', month: 'long' });
+      return `<option value="${m}" ${cur===m?'selected':''}>${label}</option>`;
+    }).join('');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SETTINGS
+// ─────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingApiKey').value = state.settings.apiKey || '';
+  document.getElementById('settingBinId').value = state.settings.binId || '';
+  document.getElementById('settingCurrency').value = state.settings.currency || DEFAULT_CURRENCY;
+  openModal('settingsModal');
+}
+
+async function saveSettings() {
+  const apiKey   = document.getElementById('settingApiKey').value.trim();
+  const binId    = document.getElementById('settingBinId').value.trim();
+  const currency = document.getElementById('settingCurrency').value;
+
+  if (!apiKey) { showToast('Please enter your Access Key', 'error'); return; }
+
+  state.settings.apiKey   = apiKey;
+  state.settings.currency = currency;
+
+  if (apiKey && !binId) {
+    showToast('Creating cloud storage…');
+    const newId = await createNewBin();
+    if (newId) {
+      state.settings.binId = newId;
+      showToast('Bin created! ✓', 'success');
+    } else {
+      showToast('Could not create bin — check your Access Key', 'error'); return;
+    }
+  } else {
+    state.settings.binId = binId;
+  }
+
+  // Save credentials to their own localStorage keys — same pattern as El Shaddai
+  LS.set('ff_key', state.settings.apiKey);
+  LS.set('ff_bin', state.settings.binId);
+  LS.set('ff_cur', currency);
+  saveLocalState();
+  closeModal('settingsModal');
+
+  if (state.settings.apiKey && state.settings.binId) {
+    await syncFromCloud();
+  } else {
+    setSyncStatus('idle');
+  }
+  renderAll();
+  showToast('Settings saved ✓', 'success');
+}
+
+
+function clearAllData() {
+  if (!confirm('This will delete ALL local data. Are you sure?')) return;
+  state.transactions = [];
+  state.budgets = {};
+  state.goals = [];
+  state.recurringRules = [];
+  saveLocalState();
+  renderAll();
+  closeModal('settingsModal');
+  showToast('All local data cleared', 'success');
+}
+
+// ─────────────────────────────────────────────
+//  MODAL HELPERS
+// ─────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3000);
+}
+
+// ─────────────────────────────────────────────
+//  UTIL
+// ─────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────
+//  SERVICE WORKER (inline, version-based cache)
+// ─────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'finflow-${APP_VERSION}';
+    self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE)); self.skipWaiting(); });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      if (e.request.method !== 'GET' || e.request.url.includes('jsonbin')) return;
+      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+
+// ─────────────────────────────────────────────
+//  RECURRING TRANSACTIONS
+// ─────────────────────────────────────────────
+let currentRecType = 'income';
+
+function openRecurringModal() {
+  document.getElementById('recDesc').value = '';
+  document.getElementById('recAmount').value = '';
+  document.getElementById('recNote').value = '';
+  document.getElementById('recDay').value = '1';
+  document.getElementById('recFreq').value = 'monthly';
+  setRecType('income');
+  openModal('recurringModal');
+}
+
+function setRecType(type) {
+  currentRecType = type;
+  document.getElementById('recTypeIncome').classList.toggle('active', type === 'income');
+  document.getElementById('recTypeExpense').classList.toggle('active', type === 'expense');
+  const sel = document.getElementById('recCategory');
+  sel.innerHTML = DEFAULT_CATEGORIES[type].map(c => `<option>${c}</option>`).join('');
+}
+
+function saveRecurring() {
+  const desc = document.getElementById('recDesc').value.trim();
+  const amount = parseFloat(document.getElementById('recAmount').value);
+  const category = document.getElementById('recCategory').value;
+  const freq = document.getElementById('recFreq').value;
+  const day = parseInt(document.getElementById('recDay').value) || 1;
+  const note = document.getElementById('recNote').value.trim();
+
+  if (!desc || isNaN(amount) || amount <= 0) { showToast('Fill in description and amount', 'error'); return; }
+
+  state.recurringRules.push({
+    id: Date.now().toString(),
+    type: currentRecType,
+    desc, amount, category, freq, day, note,
+    owner: loggedIn.name,
+    lastApplied: null,
+    created: new Date().toISOString()
+  });
+
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderRecurring();
+  closeModal('recurringModal');
+  showToast('Recurring rule saved ✓', 'success');
+}
+
+function deleteRecurring(id) {
+  if (!confirm('Delete this recurring rule?')) return;
+  state.recurringRules = state.recurringRules.filter(r => r.id !== id);
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderRecurring();
+  showToast('Rule deleted', 'success');
+}
+
+function autoApplyRecurring() {
+  // Silent version of applyDueRecurring — runs on load, no toast
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  let applied = 0;
+  state.recurringRules.filter(r => r.owner === loggedIn.name).forEach(rule => {
+    if (isDue(rule, today)) {
+      const periodKey = getPeriodKey(rule, today);
+      if (rule.lastApplied === periodKey) return;
+      state.transactions.unshift({
+        id: Date.now().toString() + Math.random(),
+        type: rule.type, desc: rule.desc, amount: rule.amount,
+        category: rule.category, date: todayStr,
+        note: (rule.note ? rule.note + ' ' : '') + '[auto]',
+        owner: rule.owner,
+        created: new Date().toISOString(),
+        recurringId: rule.id
+      });
+      rule.lastApplied = periodKey;
+      applied++;
+    }
+  });
+  if (applied > 0) { saveLocalState(); scheduleSyncToCloud(); renderAll(); }
+}
+
+function applyDueRecurring() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  let applied = 0;
+
+  state.recurringRules.filter(r => r.owner === loggedIn.name).forEach(rule => {
+    if (isDue(rule, today)) {
+      const periodKey = getPeriodKey(rule, today);
+      if (rule.lastApplied === periodKey) return;
+      state.transactions.unshift({
+        id: Date.now().toString() + Math.random(),
+        type: rule.type, desc: rule.desc, amount: rule.amount,
+        category: rule.category, date: todayStr,
+        note: rule.note + (rule.note ? ' ' : '') + '[auto]',
+        owner: rule.owner,
+        created: new Date().toISOString(),
+        recurringId: rule.id
+      });
+      rule.lastApplied = periodKey;
+      applied++;
+    }
+  });
+
+  if (applied > 0) {
+    saveLocalState();
+    scheduleSyncToCloud();
+    renderAll();
+    showToast(`${applied} recurring transaction${applied > 1 ? 's' : ''} posted ✓`, 'success');
+  } else {
+    showToast('No rules are due today', '');
+  }
+}
+
+function isDue(rule, date) {
+  if (rule.freq === 'monthly') return date.getDate() === rule.day;
+  if (rule.freq === 'weekly') return date.getDay() === (rule.day % 7);
+  if (rule.freq === 'yearly') {
+    const [m, d] = (rule.dayOfYear || '01-01').split('-').map(Number);
+    return date.getMonth() + 1 === m && date.getDate() === d;
+  }
+  return false;
+}
+
+function getPeriodKey(rule, date) {
+  if (rule.freq === 'monthly') return `${date.getFullYear()}-${date.getMonth()}`;
+  if (rule.freq === 'weekly') return `${date.getFullYear()}-W${Math.floor(date.getDate() / 7)}`;
+  if (rule.freq === 'yearly') return `${date.getFullYear()}`;
+  return date.toISOString().split('T')[0];
+}
+
+function renderRecurring() {
+  const grid = document.getElementById('recurringGrid');
+  if (!grid) return;
+
+  const myRules = state.recurringRules.filter(r => r.owner === loggedIn.name);
+  if (!myRules.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔁</div><p>No recurring rules yet. Add salary, subscriptions, rent, etc.</p></div>`;
+    return;
+  }
+
+  const today = new Date();
+  grid.innerHTML = myRules.map(r => {
+    const due = isDue(r, today);
+    const alreadyDone = r.lastApplied === getPeriodKey(r, today);
+    const freqLabel = r.freq === 'monthly' ? `Monthly on day ${r.day}` : r.freq === 'weekly' ? `Weekly (day ${r.day % 7})` : 'Yearly';
+    return `<div class="budget-card">
+      <div class="budget-header">
+        <div>
+          <div class="budget-category">${esc(r.desc)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">${freqLabel} · <span class="category-chip">${esc(r.category)}</span></div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteRecurring('${r.id}')">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+        <span class="tx-amount ${r.type}" style="font-family:var(--font-mono);font-size:16px">${r.type === 'expense' ? '-' : '+'}${fmt(r.amount)}</span>
+        <span class="tx-type-badge ${r.type}">${r.type === 'income' ? '↑ Income' : '↓ Expense'}</span>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:${due && !alreadyDone ? 'var(--amber)' : 'var(--text3)'}">
+        ${due && !alreadyDone ? '⚡ Due today' : alreadyDone ? '✓ Applied this period' : 'Not due today'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+//  EXPORT TO CSV
+// ─────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['Date','Description','Category','Type','Amount','Currency','Note']];
+  const cur = state.settings.currency || 'SGD';
+
+  const txs = [...myTx()].sort((a,b) => b.date.localeCompare(a.date));
+  txs.forEach(t => {
+    rows.push([
+      t.date,
+      `"${(t.desc||'').replace(/"/g,'""')}"`,
+      `"${(t.category||'').replace(/"/g,'""')}"`,
+      t.type,
+      t.amount.toFixed(2),
+      cur,
+      `"${(t.note||'').replace(/"/g,'""')}"`
+    ]);
+  });
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finflow-transactions-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${txs.length} transactions ✓`, 'success');
+}
+
+// ─────────────────────────────────────────────
+//  MULTI-CURRENCY CONVERTER
+// ─────────────────────────────────────────────
+const FX_CACHE_MS = 60 * 60 * 1000; // 1 hour
+
+async function fetchFxRates() {
+  const fromEl = document.getElementById('fxFrom');
+  if (!fromEl) return;
+  const base = fromEl.value;
+  const now = Date.now();
+
+  // Use cached if fresh and same base
+  if (state.fxRates && state.fxRates.base === base && state.fxRates.ts && (now - state.fxRates.ts) < FX_CACHE_MS) {
+    convertCurrency(); return;
+  }
+
+  document.getElementById('fxMeta').textContent = 'Fetching rates…';
+  try {
+    const res = await fetch(`https://open.er-api.com/v6/latest/${base}`);
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    state.fxRates = { base, rates: data.rates, ts: now };
+    saveLocalState();
+    convertCurrency();
+  } catch(e) {
+    // Fallback: static approximate rates relative to SGD
+    const fallback = { SGD:1, USD:0.74, EUR:0.68, GBP:0.58, MYR:3.48, PHP:41.5, JPY:110.5, AUD:1.13, CNY:5.35, HKD:5.79, THB:26.2, IDR:11200 };
+    const sgdBase = {};
+    const fromRate = fallback[base] || 1;
+    Object.keys(fallback).forEach(c => sgdBase[c] = fallback[c] / fromRate);
+    state.fxRates = { base, rates: sgdBase, ts: now, fallback: true };
+    saveLocalState();
+    convertCurrency();
+    document.getElementById('fxMeta').textContent = 'Using offline rates (approximate)';
+  }
+}
+
+function convertCurrency() {
+  const amountEl = document.getElementById('fxAmount');
+  const fromEl = document.getElementById('fxFrom');
+  const toEl = document.getElementById('fxTo');
+  const resultEl = document.getElementById('fxResult');
+  const metaEl = document.getElementById('fxMeta');
+  if (!amountEl || !fromEl || !toEl || !resultEl) return;
+
+  const amount = parseFloat(amountEl.value);
+  const from = fromEl.value;
+  const to = toEl.value;
+
+  if (isNaN(amount) || amount <= 0) { resultEl.textContent = ''; return; }
+
+  // Fetch if no rates or stale or different base
+  if (!state.fxRates || state.fxRates.base !== from || (Date.now() - (state.fxRates.ts||0)) > FX_CACHE_MS) {
+    fetchFxRates(); return;
+  }
+
+  const rate = state.fxRates.rates[to];
+  if (!rate) { resultEl.textContent = 'Rate unavailable'; return; }
+
+  const converted = (amount * rate).toFixed(2);
+  resultEl.textContent = `${amount.toLocaleString()} ${from} = ${parseFloat(converted).toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2})} ${to}`;
+
+  const ts = new Date(state.fxRates.ts).toLocaleTimeString('en-SG', {hour:'2-digit', minute:'2-digit'});
+  metaEl.textContent = `Rate: 1 ${from} = ${rate.toFixed(4)} ${to} · ${state.fxRates.fallback ? 'offline estimate' : `updated ${ts}`}`;
+}
+
+// ─────────────────────────────────────────────
+//  AUTH
+// ─────────────────────────────────────────────
+function renderAuthOrApp() {
+  const appEl    = document.getElementById('app');
+  const authEl   = document.getElementById('authScreen');
+
+  // No JSONBin configured yet — show settings
+  if (!state.settings.apiKey || !state.settings.binId) {
+    appEl.style.display = 'none';
+    authEl.style.display = 'none';
+    openSettings();
+    return;
+  }
+
+  // No users yet — show first-time setup
+  if (!state.users.length) {
+    appEl.style.display = 'none';
+    authEl.style.display = 'flex';
+    document.getElementById('setupPanel').style.display = 'block';
+    document.getElementById('loginPanel').style.display = 'none';
+    return;
+  }
+
+  // Users exist but not logged in — show login
+  if (!loggedIn) {
+    appEl.style.display = 'none';
+    authEl.style.display = 'flex';
+    document.getElementById('setupPanel').style.display = 'none';
+    document.getElementById('loginPanel').style.display = 'block';
+    return;
+  }
+
+  // Logged in — show app
+  authEl.style.display = 'none';
+  appEl.style.display = 'flex';
+  document.getElementById('headerUser').style.display = '';
+  document.getElementById('headerUser').textContent = '👤 ' + loggedIn.name + (loggedIn.isAdmin ? ' (Admin)' : '');
+  document.getElementById('signOutBtn').style.display = '';
+  document.getElementById('usersTab').style.display = loggedIn.isAdmin ? '' : 'none';
+
+  populateFilters();
+  renderAll();
+  autoApplyRecurring();
+  const fxFromEl = document.getElementById('fxFrom');
+  if (fxFromEl && state.settings.currency) fxFromEl.value = state.settings.currency;
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doSetup() {
+  const name = document.getElementById('setupName').value.trim();
+  const pw   = document.getElementById('setupPw').value.trim();
+  if (!name || !pw) { showAuthError('Please enter both name and password.'); return; }
+  if (pw.length < 4) { showAuthError('Password must be at least 4 characters.'); return; }
+  state.users = [{ name, password: pw, isAdmin: true }];
+  loggedIn = { name, isAdmin: true };
+  saveLocalState();
+  scheduleSyncToCloud();
+  document.getElementById('authError').style.display = 'none';
+  renderAuthOrApp();
+}
+
+function doLogin() {
+  const name = document.getElementById('loginName').value.trim();
+  const pw   = document.getElementById('loginPw').value.trim();
+  if (!name || !pw) { showAuthError('Please enter your name and password.'); return; }
+  const user = state.users.find(u => u.name.toLowerCase() === name.toLowerCase());
+  if (!user) { showAuthError('User not found. Check your name.'); return; }
+  if (user.password !== pw) { showAuthError('Incorrect password.'); return; }
+  loggedIn = { name: user.name, isAdmin: user.isAdmin };
+  document.getElementById('authError').style.display = 'none';
+  renderAuthOrApp();
+}
+
+function doSignOut() {
+  loggedIn = null;
+  // Clear login fields
+  const ln = document.getElementById('loginName');
+  const lp = document.getElementById('loginPw');
+  if (ln) ln.value = '';
+  if (lp) lp.value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('headerUser').style.display = 'none';
+  document.getElementById('signOutBtn').style.display = 'none';
+  renderAuthOrApp();
+}
+
+// Enter key support on auth inputs
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('setupPanel').style.display !== 'none') doSetup();
+  else if (document.getElementById('loginPanel').style.display !== 'none') doLogin();
+});
+
+// ─────────────────────────────────────────────
+//  USER MANAGEMENT (admin)
+// ─────────────────────────────────────────────
+function openAddUserModal() {
+  document.getElementById('newUserName').value = '';
+  document.getElementById('newUserPw').value = '';
+  document.getElementById('newUserRole').value = 'user';
+  openModal('addUserModal');
+}
+
+function saveNewUser() {
+  const name    = document.getElementById('newUserName').value.trim();
+  const pw      = document.getElementById('newUserPw').value.trim();
+  const isAdmin = document.getElementById('newUserRole').value === 'admin';
+  if (!name || !pw) { showToast('Enter name and password', 'error'); return; }
+  if (pw.length < 4) { showToast('Password must be at least 4 characters', 'error'); return; }
+  if (state.users.find(u => u.name.toLowerCase() === name.toLowerCase())) {
+    showToast('A user with that name already exists', 'error'); return;
+  }
+  state.users.push({ name, password: pw, isAdmin });
+  state.users.sort((a, b) => a.name.localeCompare(b.name));
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderUsers();
+  closeModal('addUserModal');
+  showToast('User added ✓', 'success');
+}
+
+function deleteUser(name) {
+  if (name === loggedIn.name) { showToast("You can't delete yourself", 'error'); return; }
+  if (!confirm(`Delete user "${name}"? Their data will remain but they won't be able to log in.`)) return;
+  state.users = state.users.filter(u => u.name !== name);
+  saveLocalState();
+  scheduleSyncToCloud();
+  renderUsers();
+  showToast('User removed ✓', 'success');
+}
+
+function resetUserPw(name) {
+  const pw = prompt(`Set new password for ${name}:`);
+  if (!pw || pw.trim().length < 4) { alert('Password must be at least 4 characters.'); return; }
+  state.users = state.users.map(u => u.name === name ? { ...u, password: pw.trim() } : u);
+  saveLocalState();
+  scheduleSyncToCloud();
+  showToast('Password updated ✓', 'success');
+}
+
+function renderUsers() {
+  const el = document.getElementById('usersTable');
+  if (!el) return;
+  if (!state.users.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No users yet.</p></div>';
+    return;
+  }
+  el.innerHTML = `<table class="tx-table" style="width:100%">
+    <thead><tr>
+      <th>Name</th><th>Role</th><th>Transactions</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${state.users.map(u => {
+        const txCount = state.transactions.filter(t => t.owner === u.name).length;
+        return `<tr>
+          <td class="user-name">${esc(u.name)} ${u.name === loggedIn.name ? '<span style="font-size:11px;color:var(--text3)">(you)</span>' : ''}</td>
+          <td>${u.isAdmin ? '<span class="user-badge">ADMIN</span>' : '<span style="font-size:12px;color:var(--text3)">User</span>'}</td>
+          <td style="color:var(--text2);font-size:13px">${txCount}</td>
+          <td style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="resetUserPw('${esc(u.name)}')">Reset PW</button>
+            ${u.name !== loggedIn.name ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${esc(u.name)}')">Remove</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function doChangePw() {
+  const oldPw = document.getElementById('cpOld').value;
+  const newPw = document.getElementById('cpNew').value.trim();
+  const errEl = document.getElementById('cpError');
+  const user  = state.users.find(u => u.name === loggedIn.name);
+  if (!user || user.password !== oldPw) { errEl.textContent = 'Current password is incorrect.'; errEl.style.display = 'block'; return; }
+  if (newPw.length < 4) { errEl.textContent = 'New password must be at least 4 characters.'; errEl.style.display = 'block'; return; }
+  state.users = state.users.map(u => u.name === loggedIn.name ? { ...u, password: newPw } : u);
+  saveLocalState();
+  scheduleSyncToCloud();
+  errEl.style.display = 'none';
+  closeModal('changePwModal');
+  showToast('Password changed ✓', 'success');
+}
+
+// ─────────────────────────────────────────────
+//  BOOT
+// ─────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
