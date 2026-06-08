@@ -77,7 +77,11 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 4px;
+    overflow-x: auto;
+    max-width: 60vw;
+    scrollbar-width: none;
   }
+  .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab {
     padding: 6px 14px;
     border-radius: 7px;
@@ -85,6 +89,8 @@
     color: var(--text2);
     cursor: pointer; border: none; background: none;
     transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .nav-tab:hover { color: var(--text); }
   .nav-tab.active { background: var(--accent); color: #fff; }
@@ -1113,6 +1119,7 @@ function switchView(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   event.currentTarget.classList.add('active');
+  event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   renderAll();
 }
 
