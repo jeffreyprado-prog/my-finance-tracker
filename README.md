@@ -1,1 +1,1 @@
-# financetracjer
+# financetracker
