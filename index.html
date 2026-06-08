@@ -56,10 +56,24 @@
     background: rgba(14,15,20,0.85);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
+  }
+
+  .header-top {
     padding: 0 24px;
-    height: 60px;
+    height: 56px;
     display: flex; align-items: center; justify-content: space-between;
   }
+
+  /* Tab bar sits below the header top row */
+  .tab-bar {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
 
   .logo {
     font-family: var(--font-display);
@@ -71,20 +85,9 @@
 
   .header-actions { display: flex; align-items: center; gap: 10px; }
 
-  .nav-tabs {
-    display: flex; align-items: center; gap: 4px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 4px;
-    overflow-x: auto;
-    max-width: 60vw;
-    scrollbar-width: none;
-  }
-  .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab {
-    padding: 6px 14px;
-    border-radius: 7px;
+    padding: 6px 16px;
+    border-radius: 20px;
     font-size: 13px; font-weight: 500;
     color: var(--text2);
     cursor: pointer; border: none; background: none;
@@ -92,7 +95,7 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .nav-tab:hover { color: var(--text); }
+  .nav-tab:hover { color: var(--text); background: var(--bg3); }
   .nav-tab.active { background: var(--accent); color: #fff; }
 
   main { flex: 1; padding: 28px 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
@@ -512,8 +515,18 @@
 
 <div id="app">
   <header>
-    <div class="logo">Fin<span>Flow</span></div>
-    <nav class="nav-tabs">
+    <div class="header-top">
+      <div class="logo">Fin<span>Flow</span></div>
+      <div class="header-actions">
+        <span class="sync-dot" id="syncDot"></span>
+        <span class="sync-label" id="syncLabel">Loading…</span>
+        <span id="headerUser" style="font-size:12px;color:var(--text2);display:none"></span>
+        <button class="btn btn-ghost btn-sm" id="toggleAmountBtn" style="display:none;font-size:16px;padding:5px 8px" onclick="toggleAmounts()" title="Show/hide amounts">👁</button>
+        <button class="btn btn-ghost btn-sm" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
+        <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙</button>
+      </div>
+    </div>
+    <nav class="tab-bar">
       <button class="nav-tab active" onclick="switchView('dashboard')">Dashboard</button>
       <button class="nav-tab" onclick="switchView('transactions')">Transactions</button>
       <button class="nav-tab" onclick="switchView('recurring')">Recurring</button>
@@ -522,14 +535,6 @@
       <button class="nav-tab" onclick="switchView('charts')">Charts</button>
       <button class="nav-tab" id="usersTab" style="display:none" onclick="switchView('users')">Users</button>
     </nav>
-    <div class="header-actions">
-      <span class="sync-dot" id="syncDot"></span>
-      <span class="sync-label" id="syncLabel">Loading…</span>
-      <span id="headerUser" style="font-size:12px;color:var(--text2);display:none"></span>
-      <button class="btn btn-ghost btn-sm" id="toggleAmountBtn" style="display:none;font-size:16px;padding:5px 8px" onclick="toggleAmounts()" title="Show/hide amounts">👁</button>
-      <button class="btn btn-ghost btn-sm" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
-      <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙</button>
-    </div>
   </header>
 
   <main>
@@ -1119,6 +1124,7 @@ function switchView(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   event.currentTarget.classList.add('active');
+  // Scroll the active tab into view within the tab bar
   event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   renderAll();
 }
