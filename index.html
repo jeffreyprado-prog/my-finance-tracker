@@ -53,33 +53,46 @@
 
   header {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(14,15,20,0.85);
+    background: rgba(14,15,20,0.92);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
   }
 
-  .header-top {
-    padding: 0 24px;
-    height: 56px;
-    display: flex; align-items: center; justify-content: space-between;
+  /* Row 1 — Logo */
+  .header-logo-row {
+    padding: 12px 20px 8px;
+    display: flex; align-items: center; justify-content: center;
+    border-bottom: 1px solid var(--border);
   }
 
-  /* Tab bar sits below the header top row */
+  /* Row 2 — User info + action buttons */
+  .header-actions-row {
+    padding: 8px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .header-user-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .header-user-name {
+    font-size: 13px; font-weight: 500; color: var(--text2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .header-btn-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  /* Row 3 — Scrollable tabs */
   .tab-bar {
-    display: flex; align-items: center; gap: 4px;
-    padding: 6px 12px;
+    display: flex; align-items: center; gap: 2px;
+    padding: 8px 12px;
     overflow-x: auto;
     scrollbar-width: none;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
   }
   .tab-bar::-webkit-scrollbar { display: none; }
 
   .logo {
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: 24px;
     color: var(--text);
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 6px;
   }
   .logo span { color: var(--accent2); font-style: italic; }
 
@@ -515,17 +528,26 @@
 
 <div id="app">
   <header>
-    <div class="header-top">
+    <!-- Row 1: Logo -->
+    <div class="header-logo-row">
       <div class="logo">Fin<span>Flow</span></div>
-      <div class="header-actions">
+    </div>
+
+    <!-- Row 2: User + actions -->
+    <div class="header-actions-row">
+      <div class="header-user-info">
         <span class="sync-dot" id="syncDot"></span>
         <span class="sync-label" id="syncLabel">Loading…</span>
-        <span id="headerUser" style="font-size:12px;color:var(--text2);display:none"></span>
-        <button class="btn btn-ghost btn-sm" id="toggleAmountBtn" style="display:none;font-size:16px;padding:5px 8px" onclick="toggleAmounts()" title="Show/hide amounts">👁</button>
+        <span class="header-user-name" id="headerUser" style="display:none"></span>
+      </div>
+      <div class="header-btn-group">
+        <button class="btn btn-ghost btn-sm" id="toggleAmountBtn" style="display:none;font-size:15px;padding:5px 7px" onclick="toggleAmounts()" title="Show/hide amounts">👁</button>
         <button class="btn btn-ghost btn-sm" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
         <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙</button>
       </div>
     </div>
+
+    <!-- Row 3: Scrollable tabs -->
     <nav class="tab-bar">
       <button class="nav-tab active" onclick="switchView('dashboard')">Dashboard</button>
       <button class="nav-tab" onclick="switchView('transactions')">Transactions</button>
